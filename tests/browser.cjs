@@ -35,6 +35,12 @@ const FIX = 'copc=tests/fixtures/tile.copc.laz&products=tests/fixtures/products/
   await page.waitForFunction(() => window.__lab);
   await page.evaluate(() => window.__lab.ready());
   assert.equal(await page.getAttribute('html', 'lang'), 'en', 'browser language de-DE falls back to English');
+  // potree.css locks the body for a full-screen viewer: the page must still scroll.
+  // (overflow: hidden still allows window.scrollTo, so scroll with the wheel, as a user does.)
+  await page.mouse.move(150, 600);
+  await page.mouse.wheel(0, 500);
+  assert.ok(await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 5000 }).then(() => true, () => false), 'the simulator page scrolls with the mouse wheel');
+  await page.evaluate(() => window.scrollTo(0, 0));
   assert.match(await page.getAttribute('a.portal', 'href'), /^\.\.\/\?lang=en$/);
   const n = await page.evaluate(() => window.__lab.state.tile?.points.n);
   assert.ok(n > 10000, `tile loaded from the fixture COPC: ${n} points`);
@@ -138,6 +144,9 @@ const FIX = 'copc=tests/fixtures/tile.copc.laz&products=tests/fixtures/products/
     await th.waitForTimeout(500);
     const overflow = await th.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.ok(overflow <= 1, `${p}: no horizontal scroll at 390 px (overflow ${overflow})`);
+    await th.mouse.move(195, 300);
+    await th.mouse.wheel(0, 600);
+    assert.ok(await th.waitForFunction(() => window.scrollY > 0, null, { timeout: 5000 }).then(() => true, () => false), `${p}: scrolls vertically at 390 px`);
   }
   await shot(th, 'mobile');
   await tctx.close();

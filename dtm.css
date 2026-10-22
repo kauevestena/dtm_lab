@@ -18,6 +18,9 @@
 /* Potree keeps rendering: the hidden 3D panel keeps its size (a zero-size canvas floods WebGL warnings). */
 .card { position: relative; }
 .tabpanel[data-panel="view3d"][hidden] { display: block !important; position: absolute; left: 0; right: 0; visibility: hidden; pointer-events: none; }
+/* potree.css pins the body (position: absolute; height: 100%; overflow: hidden) for a full-screen
+   viewer; this page scrolls, with the viewer in a card. */
+body { position: static; height: auto; overflow: visible; }
 .step-title { font-size: 13px; color: var(--ink); }
 .viewer3d { position: relative; height: min(66dvh, 560px); min-height: 320px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #1c1917; }
 .viewer3d #potree_render_area { position: absolute; inset: 0; }
