@@ -1,0 +1,54 @@
+# Publishes the site with GitHub Pages from an Actions artifact, so the 459 MB COPC (a release asset,
+# too large for git) can be served next to the pages. Pages answers Range requests with CORS, which
+# the COPC reader needs.
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  DATA_TAG: data-v1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the data snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dl
+          gh release download "$DATA_TAG" --dir dl
+          (cd dl && sha256sum -c SHA256SUMS)
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/data/products
+          cp -r index.html comparacao.html teoria.html *.mjs style.css dtm.css core views worker vendor _site/
+          cp dl/cooper.copc.laz _site/data/
+          tar -xzf dl/products.tar.gz -C _site/data/products
+          touch _site/.nojekyll
+          du -sh _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

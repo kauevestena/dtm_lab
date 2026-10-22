@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+__pycache__/
+*.pyc
+_site/
+# large data: served from release data-v1 (see data/README.md); local symlinks only
+data/cooper.copc.laz
+data/products
+spike/lion.copc.laz
+spike/*.png

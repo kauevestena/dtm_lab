@@ -1,0 +1,28 @@
+Third-party code and fonts bundled with dtm_lab (served locally: no CDN requests).
+
+Potree 1.8.2            vendor/potree-1.8.2/build, vendor/potree-1.8.2/libs
+                        Release asset Potree_1.8.2.zip (github.com/potree/potree/releases/tag/1.8.2),
+                        sha256 c140a8bce0ce129de762fbc0fd3ba7c21120ffd36d423dd2755abb39f32aebe5.
+                        Trimmed: removed build/potree/lazylibs (geopackage, sql.js), potree.js.map,
+                        libs/Cesium, libs/geopackage, libs/sql.js, libs/plasio, libs/brotli, libs/zstd-codec,
+                        libs/shapefile, libs/ept, libs/json5, libs/stats.js, libs/MeshLine, and everything in
+                        libs/three.js except build/three.module.js, three.min.js and LICENSE; examples, docs
+                        and sample point clouds.
+                        License (BSD 2-Clause): vendor/potree-1.8.2/LICENSE; bundled libraries keep their
+                        own licence files under vendor/potree-1.8.2/libs/*.
+three.js r124           vendor/potree-1.8.2/libs/three.js (as shipped with Potree)
+                        License (MIT): vendor/potree-1.8.2/libs/three.js/LICENSE
+copc.js 0.0.x           vendor/potree-1.8.2/libs/copc/index.js (as shipped with Potree), also used by
+                        worker/decode_worker.js
+                        License (MIT): vendor/potree-1.8.2/libs/copc/COPC-LICENSE.txt (from npm copc@0.0.9)
+laz-perf                vendor/potree-1.8.2/libs/copc/laz-perf.wasm (as shipped with Potree)
+                        License (Apache-2.0): vendor/potree-1.8.2/libs/copc/LAZPERF-LICENSE.txt
+Delaunator 5.0.1        vendor/delaunator-5.0.1/index.js (npm pack delaunator@5.0.1); the bare import
+                        'robust-predicates' is rewritten to the vendored path.
+                        License (ISC): vendor/delaunator-5.0.1/LICENSE
+robust-predicates 3.0.2 vendor/robust-predicates-3.0.2/orient2d.js, util.js (npm pack robust-predicates@3.0.2, esm/)
+                        License (Unlicense): vendor/robust-predicates-3.0.2/LICENSE
+Inter 4 (Fontsource)    vendor/fonts/inter-*.woff2 (copied from simul_adjust/transform_lab/vendor/fonts)
+                        License (SIL OFL 1.1): vendor/fonts/Inter-OFL.txt
+JetBrains Mono          vendor/fonts/jetbrains-mono-*.woff2 (same source)
+                        License (SIL OFL 1.1): vendor/fonts/JetBrainsMono-OFL.txt

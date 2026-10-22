@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DTM Lab</title>
+  <meta name="description" content="Ground filtering and interpolation simulator: run the classic DTM algorithms on a tile of a classified point cloud and score them against its reference classification.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰</text></svg>">
+  <link rel="stylesheet" href="vendor/potree-1.8.2/build/potree/potree.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dtm.css">
+</head>
+<body data-title-key="title">
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="brand"><h1 data-t="title"></h1><p data-t="subtitle"></p></div>
+    <nav class="appbar-nav">
+      <a class="hlink portal" href="../" data-t="portal"></a>
+      <a class="hlink strong" data-page="teoria.html" href="teoria.html" data-t="navTheory"></a>
+      <a class="hlink strong" data-page="comparacao.html" href="comparacao.html" data-t="navCompare"></a>
+      <div class="languages" role="group" aria-label="Language"><button data-lang="pt-BR">PT</button><button data-lang="en">EN</button></div>
+    </nav>
+  </div>
+</header>
+
+<main class="app">
+  <aside class="col-left" aria-label="Controls">
+    <section class="card">
+      <h2 class="card-title" data-t="s.workflow"></h2>
+      <div class="steps">
+        <div class="step" id="step1"><span class="step-num">1</span>
+          <div class="step-body">
+            <strong class="step-title" data-t="s.tile"></strong>
+            <p class="hint" data-t="h.tile"></p>
+            <label class="fld"><span class="field-label" data-t="f.preset"></span>
+              <select id="preset" class="field"></select></label>
+            <div class="fields">
+              <label class="fld"><span class="field-label" data-t="f.cx"></span><input id="cx" class="field" type="number" step="1"></label>
+              <label class="fld"><span class="field-label" data-t="f.cy"></span><input id="cy" class="field" type="number" step="1"></label>
+              <label class="fld"><span class="field-label" data-t="f.size"></span>
+                <select id="size" class="field"><option value="25">25 m</option><option value="50" selected>50 m</option><option value="75">75 m</option><option value="100">100 m</option></select></label>
+              <label class="fld"><span class="field-label" data-t="f.depth"></span>
+                <select id="depth" class="field"><option value="3">3</option><option value="4">4</option><option value="5" selected>5</option><option value="6">6</option><option value="99" data-t="o.fullDepth"></option></select></label>
+            </div>
+            <p class="hint" data-t="h.depth"></p>
+            <button class="btn btn-secondary w-full" id="btnLoad" data-t="b.load"></button>
+            <p class="status" id="tileStatus" role="status"></p>
+          </div>
+        </div>
+        <div class="step" id="step2"><span class="step-num">2</span>
+          <div class="step-body">
+            <strong class="step-title" data-t="s.filter"></strong>
+            <label class="fld"><span class="field-label" data-t="f.filter"></span>
+              <select id="filter" class="field"></select></label>
+            <p class="hint" id="filterDesc"></p>
+            <div id="filterForm" class="fields"></div>
+            <button class="btn btn-secondary btn-sm" id="btnFilterDefaults" data-t="b.defaults"></button>
+          </div>
+        </div>
+        <div class="step" id="step3"><span class="step-num">3</span>
+          <div class="step-body">
+            <strong class="step-title" data-t="s.interp"></strong>
+            <label class="fld"><span class="field-label" data-t="f.interp"></span>
+              <select id="interp" class="field"></select></label>
+            <p class="hint" id="interpDesc"></p>
+            <div id="interpForm" class="fields"></div>
+            <div class="fields">
+              <label class="fld"><span class="field-label" data-t="f.cell"></span>
+                <select id="cell" class="field"><option value="0.25">0.25 m</option><option value="0.5" selected>0.5 m</option><option value="1">1 m</option><option value="2">2 m</option></select></label>
+              <label class="fld"><span class="field-label" data-t="f.eq"></span><input id="eq" class="field" type="number" min="0.1" step="0.1" value="1"></label>
+            </div>
+            <p class="hint" data-t="h.eq"></p>
+          </div>
+        </div>
+        <div class="step" id="step4"><span class="step-num">4</span>
+          <div class="step-body">
+            <button class="btn btn-primary w-full" id="btnRun" data-t="b.run" disabled></button>
+            <p class="status" id="runStatus" role="status"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="card tight">
+      <h2 class="card-title" data-t="s.data"></h2>
+      <p class="note" data-t-html="h.data"></p>
+      <p class="hint" id="dataSource"></p>
+    </section>
+  </aside>
+
+  <div class="col-right">
+    <div class="tiles" id="summary">
+      <div class="tile"><div class="k" data-t="k.typeI"></div><div class="v" id="vTypeI">—</div><div class="s" data-t="k.typeIs"></div></div>
+      <div class="tile"><div class="k" data-t="k.typeII"></div><div class="v" id="vTypeII">—</div><div class="s" data-t="k.typeIIs"></div></div>
+      <div class="tile"><div class="k" data-t="k.kappa"></div><div class="v" id="vKappa">—</div><div class="s" data-t="k.kappas"></div></div>
+      <div class="tile"><div class="k" data-t="k.rmse"></div><div class="v" id="vRmse">—</div><div class="s" id="vRmseS" data-t="k.rmses"></div></div>
+    </div>
+
+    <section class="card">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="view3d" aria-selected="true" data-t="t.view3d"></button>
+        <button role="tab" data-tab="maps" aria-selected="false" data-t="t.maps"></button>
+        <button role="tab" data-tab="profile" aria-selected="false" data-t="t.profile"></button>
+        <button role="tab" data-tab="metrics" aria-selected="false" data-t="t.metrics"></button>
+        <button role="tab" data-tab="history" aria-selected="false" data-t="t.history"></button>
+      </div>
+
+      <div class="legend outcome-legend" id="legend">
+        <span><i class="sw sw-groundok"></i><span data-t="out.groundOk"></span></span>
+        <span><i class="sw sw-objectok"></i><span data-t="out.objectOk"></span></span>
+        <span><i class="sw sw-type1"></i><span data-t="out.typeI"></span></span>
+        <span><i class="sw sw-type2"></i><span data-t="out.typeII"></span></span>
+      </div>
+
+      <div class="tabpanel" data-panel="view3d">
+        <div class="toolbar">
+          <label><span data-t="f.coloring"></span>
+            <select id="coloring" class="field"><option value="classification" data-t="o.colClass"></option><option value="rgba" data-t="o.colRgb"></option><option value="elevation" data-t="o.colElev"></option></select></label>
+          <label><input type="checkbox" id="showOverlay" checked><span data-t="f.showOverlay"></span></label>
+          <label><input type="checkbox" id="showDtm" checked><span data-t="f.showDtm"></span></label>
+          <button class="btn btn-secondary btn-sm" id="btnFocus" data-t="b.focus"></button>
+        </div>
+        <div class="viewer3d" id="viewer3d"><div id="potree_render_area"></div></div>
+        <p class="hint" data-t="h.pick"></p>
+      </div>
+
+      <div class="tabpanel" data-panel="maps" hidden>
+        <p class="waiting" data-t="i.noRun" data-waiting></p>
+        <div class="maps-grid" data-results hidden>
+          <figure><figcaption data-t="m.dtm"></figcaption><canvas id="mapDtm"></canvas></figure>
+          <figure><figcaption data-t="m.ref"></figcaption><canvas id="mapRef"></canvas></figure>
+          <figure><figcaption><span data-t="m.dz"></span> <span class="mono" id="dzLimit"></span></figcaption><canvas id="mapDz"></canvas>
+            <div class="legend"><span><i class="sw sw-neg"></i><span data-t="m.below"></span></span><span><i class="sw sw-mid"></i>0</span><span><i class="sw sw-pos"></i><span data-t="m.above"></span></span></div></figure>
+          <figure><figcaption data-t="m.outcome"></figcaption><canvas id="mapOutcome"></canvas></figure>
+          <figure id="figVar" hidden><figcaption data-t="m.variance"></figcaption><canvas id="mapVar"></canvas></figure>
+        </div>
+      </div>
+
+      <div class="tabpanel" data-panel="profile" hidden>
+        <p class="waiting" data-t="i.noRun" data-waiting></p>
+        <div data-results hidden>
+          <div class="toolbar">
+            <label><span data-t="f.profileY"></span><input type="range" id="profileY" min="0" max="1" step="0.001" value="0.5"><span class="val" id="profileYv"></span></label>
+            <span class="legend"><span><i class="sw sw-line"></i><span data-t="m.dtmLine"></span></span><span><i class="sw sw-dash"></i><span data-t="m.refLine"></span></span></span>
+          </div>
+          <div class="plot short"><canvas id="profileCanvas" style="width:100%;height:100%"></canvas><div class="tooltip" id="profileTip" hidden></div></div>
+        </div>
+      </div>
+
+      <div class="tabpanel" data-panel="metrics" hidden>
+        <p class="waiting" data-t="i.noRun" data-waiting></p>
+        <div data-results hidden>
+          <div class="grid2">
+            <div>
+              <h3 data-t="s.confusion"></h3>
+              <div class="table-container"><table id="confTable"></table></div>
+              <p class="hint" data-t="h.confusion"></p>
+            </div>
+            <div>
+              <h3 data-t="s.heights"></h3>
+              <div class="table-container"><table id="errTable"></table></div>
+              <p class="hint" data-t="h.heights"></p>
+            </div>
+          </div>
+          <div class="messages" id="messages"></div>
+        </div>
+      </div>
+
+      <div class="tabpanel" data-panel="history" hidden>
+        <p class="note" data-t="h.history"></p>
+        <div class="table-container tall"><table id="histTable"></table></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn btn-secondary btn-sm" id="btnCsv" data-t="b.csv"></button>
+          <button class="btn btn-secondary btn-sm" id="btnClear" data-t="b.clear"></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="vendor/potree-1.8.2/libs/jquery/jquery-3.1.1.min.js"></script>
+<script src="vendor/potree-1.8.2/libs/spectrum/spectrum.js"></script>
+<script src="vendor/potree-1.8.2/libs/jquery-ui/jquery-ui.min.js"></script>
+<script src="vendor/potree-1.8.2/libs/other/BinaryHeap.js"></script>
+<script src="vendor/potree-1.8.2/libs/tween/tween.min.js"></script>
+<script src="vendor/potree-1.8.2/libs/d3/d3.js"></script>
+<script src="vendor/potree-1.8.2/libs/proj4/proj4.js"></script>
+<script src="vendor/potree-1.8.2/libs/openlayers3/ol.js"></script>
+<script src="vendor/potree-1.8.2/libs/i18next/i18next.js"></script>
+<script src="vendor/potree-1.8.2/libs/jstree/jstree.js"></script>
+<script src="vendor/potree-1.8.2/libs/copc/index.js"></script>
+<script src="vendor/potree-1.8.2/build/potree/potree.js"></script>
+<script type="module" src="app.mjs"></script>
+</body>
+</html>

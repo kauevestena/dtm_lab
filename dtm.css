@@ -1,0 +1,44 @@
+/* dtm_lab additions to the monorepo stylesheet. Outcome and map colours follow the dataviz reference
+   palette (Type I blue / Type II orange validated all-pairs in both modes; blue↔red diverging, grey mid). */
+:root {
+  --c-type1: #2a78d6; --c-type2: #eb6834; --c-groundok: #8a7a66; --c-objectok: #c9c6bd;
+  --c-div-neg: #2a78d6; --c-div-pos: #e34948; --c-div-mid: #f0efec; --c-empty: #f5f5f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-type1: #3987e5; --c-type2: #d95926; --c-groundok: #a08f78; --c-objectok: #57534e;
+    --c-div-neg: #3987e5; --c-div-pos: #e66767; --c-div-mid: #383835; --c-empty: #1c1917;
+  }
+}
+:root[data-theme="dark"] {
+  --c-type1: #3987e5; --c-type2: #d95926; --c-groundok: #a08f78; --c-objectok: #57534e;
+  --c-div-neg: #3987e5; --c-div-pos: #e66767; --c-div-mid: #383835; --c-empty: #1c1917;
+}
+
+/* Potree keeps rendering: the hidden 3D panel keeps its size (a zero-size canvas floods WebGL warnings). */
+.card { position: relative; }
+.tabpanel[data-panel="view3d"][hidden] { display: block !important; position: absolute; left: 0; right: 0; visibility: hidden; pointer-events: none; }
+.step-title { font-size: 13px; color: var(--ink); }
+.viewer3d { position: relative; height: min(66dvh, 560px); min-height: 320px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #1c1917; }
+.viewer3d #potree_render_area { position: absolute; inset: 0; }
+.outcome-legend { font-size: 12px; color: var(--label); margin: 0 0 10px; }
+.sw-groundok { background: var(--c-groundok); } .sw-objectok { background: var(--c-objectok); }
+.sw-type1 { background: var(--c-type1); } .sw-type2 { background: var(--c-type2); }
+.sw-neg { background: var(--c-div-neg); } .sw-pos { background: var(--c-div-pos); } .sw-mid { background: var(--c-div-mid); border: 1px solid var(--line-strong); }
+.sw-line { height: 2px !important; background: var(--ink); } .sw-dash { height: 0 !important; border-top: 2px dashed var(--muted); }
+.maps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.maps-grid figure { margin: 0; min-width: 0; }
+.maps-grid figcaption { font-size: 12px; font-weight: 600; color: var(--label); margin-bottom: 4px; }
+.maps-grid canvas { width: 100%; height: auto; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: var(--c-empty); display: block; }
+.maps-grid .legend { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.plot canvas { display: block; }
+#histTable td, #errTable td, #confTable td { white-space: nowrap; }
+.pec { font-weight: 700; font-family: var(--font-mono); }
+.cmp-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; }
+.cmp-controls .fld { min-width: 160px; }
+.bar { display: inline-block; height: 8px; border-radius: 0 4px 4px 0; vertical-align: middle; margin-right: 6px; }
+@media (max-width: 480px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tile .v { font-size: 17px; } }
+.map-wrap { position: relative; margin-top: 8px; }
+.map-wrap canvas { width: 100%; height: auto; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: var(--c-empty); display: block; }
+.cmp-side .legend { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.cmp-side select:disabled { opacity: .5; }

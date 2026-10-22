@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>COPC tile bench</title>
+<style>body{font:14px/1.4 system-ui,sans-serif;margin:16px;background:#fff;color:#111}pre{background:#f3f3f3;padding:12px}</style></head>
+<body>
+<h1>COPC tile read benchmark</h1>
+<p>Query: <code>?copc=URL&amp;size=50&amp;cx=..&amp;cy=..</code> (defaults to the cloud centre).</p>
+<pre id="out">running…</pre>
+<script>
+const p = new URLSearchParams(location.search);
+const url = new URL(p.get('copc') || '../data/cooper.copc.laz', location.href).href;
+const size = Number(p.get('size') || 50);
+const cx = Number(p.get('cx') || 331002.4), cy = Number(p.get('cy') || 7102180.7);
+const box = [cx - size / 2, cy - size / 2, cx + size / 2, cy + size / 2];
+const w = new Worker('bench_worker.js');
+const t0 = performance.now();
+w.onmessage = (e) => {
+  const r = { ...e.data, depth: p.get('depth'), wallMs: Math.round(performance.now() - t0), box, size };
+  window.__bench = r;
+  document.getElementById('out').textContent = JSON.stringify(r, null, 2);
+  console.log('[bench]', JSON.stringify(r));
+};
+const maxDepth = p.has('depth') ? Number(p.get('depth')) : undefined;
+w.postMessage({ url, box, maxDepth });
+</script>
+</body>
+</html>

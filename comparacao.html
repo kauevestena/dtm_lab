@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DTM Lab</title>
+  <meta name="description" content="Whole-cloud comparison of PDAL ground filters (SMRF, PMF, CSF) and DTM interpolators against the reference classification.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dtm.css">
+</head>
+<body data-title-key="titleCompare">
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="brand"><h1 data-t="title"></h1><p data-t="titleCompare"></p></div>
+    <nav class="appbar-nav">
+      <a class="hlink portal" href="../" data-t="portal"></a>
+      <a class="hlink strong" data-page="index.html" href="index.html" data-t="navSimulator"></a>
+      <a class="hlink strong" data-page="teoria.html" href="teoria.html" data-t="navTheory"></a>
+      <div class="languages" role="group" aria-label="Language"><button data-lang="pt-BR">PT</button><button data-lang="en">EN</button></div>
+    </nav>
+  </div>
+</header>
+
+<main class="cmp-main">
+  <section class="card">
+    <h2 class="card-title" data-t="cmp.table"></h2>
+    <p class="note" data-t="cmp.intro"></p>
+    <p class="status" id="cmpStatus" role="status"></p>
+    <div class="cmp-controls" style="margin:8px 0">
+      <label class="fld"><span class="field-label" data-t="f.eq"></span><input id="eq" class="field" type="number" min="0.1" step="0.1" value="1"></label>
+    </div>
+    <div class="table-container"><table id="sumTable"></table></div>
+    <p class="hint" data-t="h.heights"></p>
+    <p class="hint" data-t="cmp.note"></p>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title" data-t="cmp.maps"></h2>
+    <div class="cmp-grid">
+      <div class="cmp-side" data-side="left">
+        <div class="cmp-controls">
+          <label class="fld"><span class="field-label" data-t="cmp.layer"></span><select class="field" data-role="layer"></select></label>
+          <label class="fld"><span class="field-label" data-t="cmp.filter"></span><select class="field" data-role="filter"></select></label>
+          <label class="fld"><span class="field-label" data-t="cmp.interp"></span><select class="field" data-role="interp"></select></label>
+        </div>
+        <div class="map-wrap"><canvas data-role="map"></canvas><div class="tooltip" data-role="tip" hidden></div></div>
+        <div class="legend" data-role="legend"></div>
+      </div>
+      <div class="cmp-side" data-side="right">
+        <div class="cmp-controls">
+          <label class="fld"><span class="field-label" data-t="cmp.layer"></span><select class="field" data-role="layer"></select></label>
+          <label class="fld"><span class="field-label" data-t="cmp.filter"></span><select class="field" data-role="filter"></select></label>
+          <label class="fld"><span class="field-label" data-t="cmp.interp"></span><select class="field" data-role="interp"></select></label>
+        </div>
+        <div class="map-wrap"><canvas data-role="map"></canvas><div class="tooltip" data-role="tip" hidden></div></div>
+        <div class="legend" data-role="legend"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script type="module" src="compare.mjs"></script>
+</body>
+</html>

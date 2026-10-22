@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DTM Lab</title>
+  <meta name="description" content="Theory behind DTM Lab: ground filters, interpolators and quality measures for digital terrain models.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="dtm.css">
+  <style>
+    html[lang="pt-BR"] .en, html[lang="en"] .pt { display: none !important; }
+    .doc .formula { font-family: var(--font-mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; display: inline-block; margin: 4px 0; }
+  </style>
+</head>
+<body data-title-key="titleTheory">
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="brand"><h1 data-t="title"></h1><p data-t="titleTheory"></p></div>
+    <nav class="appbar-nav">
+      <a class="hlink portal" href="../" data-t="portal"></a>
+      <a class="hlink strong" data-page="index.html" href="index.html" data-t="navSimulator"></a>
+      <a class="hlink strong" data-page="comparacao.html" href="comparacao.html" data-t="navCompare"></a>
+      <div class="languages" role="group" aria-label="Language"><button data-lang="pt-BR">PT</button><button data-lang="en">EN</button></div>
+    </nav>
+  </div>
+</header>
+
+<div class="pagelayout">
+<nav class="toc">
+  <strong class="pt">Conteúdo</strong><strong class="en">Contents</strong>
+  <a href="#s1"><span class="pt">1. MDT, MDS e a referência</span><span class="en">1. DTM, DSM and the reference</span></a>
+  <a href="#s2"><span class="pt">2. Filtragem de solo</span><span class="en">2. Ground filtering</span></a>
+  <a class="sub" href="#f-slope"><span class="pt">Declividade</span><span class="en">Slope-based</span></a>
+  <a class="sub" href="#f-pmf"><span class="pt">PMF</span><span class="en">PMF</span></a>
+  <a class="sub" href="#f-smrf"><span class="pt">SMRF</span><span class="en">SMRF</span></a>
+  <a class="sub" href="#f-ptd"><span class="pt">TIN progressivo</span><span class="en">Progressive TIN</span></a>
+  <a class="sub" href="#f-robust"><span class="pt">Interpolação robusta</span><span class="en">Robust interpolation</span></a>
+  <a class="sub" href="#f-csf"><span class="pt">CSF</span><span class="en">CSF</span></a>
+  <a class="sub" href="#f-mcc"><span class="pt">MCC e mínimo por blocos</span><span class="en">MCC and block minimum</span></a>
+  <a href="#s3"><span class="pt">3. Interpolação</span><span class="en">3. Interpolation</span></a>
+  <a href="#s4"><span class="pt">4. Qualidade</span><span class="en">4. Quality</span></a>
+  <a href="#s5"><span class="pt">5. O que o simulador simplifica</span><span class="en">5. What the simulator simplifies</span></a>
+  <a href="#s6"><span class="pt">6. Referências</span><span class="en">6. References</span></a>
+</nav>
+
+<article class="doc" id="doc">
+  <h2 id="s1"><span class="pt">1. MDT, MDS e a referência</span><span class="en">1. DTM, DSM and the reference</span></h2>
+  <p class="pt">O modelo digital de terreno (MDT) representa só o solo; o modelo digital de superfície (MDS) inclui edificações e vegetação. Produzir um MDT a partir de uma nuvem de pontos tem duas etapas: <strong>filtrar</strong> (decidir quais pontos são solo) e <strong>interpolar</strong> (estimar a cota em uma grade a partir dos pontos de solo).</p>
+  <p class="en">A digital terrain model (DTM) represents the bare ground only; a digital surface model (DSM) includes buildings and vegetation. Making a DTM from a point cloud has two steps: <strong>filtering</strong> (deciding which points are ground) and <strong>interpolation</strong> (estimating heights on a grid from the ground points).</p>
+  <p class="pt">Este simulador parte de uma nuvem LiDAR já classificada (69,4 M de pontos). Essa classificação é tratada como a verdade: cada algoritmo reclassifica a nuvem do zero e é avaliado contra ela. Solo de referência = classes 2 (solo) e 20 (solo reservado junto a linhas de quebra); o MDT de referência usa só a classe 2, como faria o produtor.</p>
+  <p class="en">This simulator starts from an already classified LiDAR cloud (69.4 M points). That classification is taken as the truth: each algorithm reclassifies the cloud from scratch and is scored against it. Reference ground = classes 2 (ground) and 20 (ground set aside near breaklines); the reference DTM uses class 2 only, as the producer would.</p>
+
+  <h2 id="s2"><span class="pt">2. Filtragem de solo</span><span class="en">2. Ground filtering</span></h2>
+  <p class="pt">Todos os filtros exploram três hipóteses: o solo é a superfície mais baixa; o terreno é suave (desníveis bruscos são objetos); e os objetos têm tamanho limitado (nenhum edifício é maior que uma janela escolhida). Cada família pesa essas hipóteses de um jeito, e é isso que explica onde cada uma falha.</p>
+  <p class="en">All filters exploit three assumptions: the ground is the lowest surface; terrain is smooth (abrupt drops are objects); and objects have a bounded size (no building is larger than a chosen window). Each family weighs these assumptions differently, and that is what explains where each fails.</p>
+
+  <h3 id="f-slope"><span class="pt">Declividade (Vosselman, 2000)</span><span class="en">Slope-based (Vosselman, 2000)</span></h3>
+  <p class="pt">Um ponto p é solo se nenhum vizinho q dentro do raio estiver baixo demais para a distância d entre eles:</p>
+  <p class="en">A point p is ground if no neighbour q within the radius lies too low for their distance d:</p>
+  <p class="pt"><span class="formula">h(p) − h(q) ≤ dz₀ + s·d &nbsp; para todo q com d ≤ raio</span></p>
+  <p class="en"><span class="formula">h(p) − h(q) ≤ dz₀ + s·d &nbsp; for every q with d ≤ radius</span></p>
+  <p class="pt">Equivale a uma erosão morfológica com um cone. Falha em encostas íngremes (limiar fixo) e no meio de telhados maiores que o dobro do raio: os vizinhos são todos telhado. Teste no simulador com o recorte de galpões e raio de 5 m.</p>
+  <p class="en">It equals a morphological erosion with a cone. It fails on steep slopes (fixed threshold) and in the middle of roofs wider than twice the radius: all neighbours are roof. Try it in the simulator on the warehouse tile with a 5 m radius.</p>
+
+  <h3 id="f-pmf"><span class="pt">Morfológico progressivo, PMF (Zhang et al., 2003)</span><span class="en">Progressive morphological, PMF (Zhang et al., 2003)</span></h3>
+  <p class="pt">Grade com o ponto mais baixo de cada célula; aberturas (erosão seguida de dilatação) com janelas crescentes; quem sobe mais que o limiar acima da superfície aberta é objeto. Janelas exponenciais w = 2·2<sup>k</sup>+1 e limiar</p>
+  <p class="en">A grid of the lowest point per cell; openings (erosion then dilation) with growing windows; whatever stands higher than the threshold above the opened surface is an object. Exponential windows w = 2·2<sup>k</sup>+1 and threshold</p>
+  <p class="pt"><span class="formula">dh(k) = s·[w(k) − w(k−1)]·c + dh₀, limitado a dh<sub>máx</sub></span></p>
+  <p class="en"><span class="formula">dh(k) = s·[w(k) − w(k−1)]·c + dh₀, capped at dh<sub>max</sub></span></p>
+  <p class="pt">Com c = 1 m, s = 0,3, dh₀ = 0,5 m e dh<sub>máx</sub> = 3 m, as janelas 3, 5, 9, 17 e 33 dão limiares 0,5; 1,1; 1,7; 2,9 e 3,0 m (5,3 calculado, cortado pelo teto). Janelas pequenas tiram carros e árvores com limiar baixo; janelas grandes tiram edifícios. A janela máxima deve superar o maior edifício.</p>
+  <p class="en">With c = 1 m, s = 0.3, dh₀ = 0.5 m and dh<sub>max</sub> = 3 m, windows 3, 5, 9, 17 and 33 give thresholds 0.5, 1.1, 1.7, 2.9 and 3.0 m (5.3 computed, cut by the cap). Small windows remove cars and trees with a low threshold; large windows remove buildings. The largest window must exceed the largest building.</p>
+
+  <h3 id="f-smrf"><span class="pt">Morfológico simples, SMRF (Pingel et al., 2013)</span><span class="en">Simple morphological, SMRF (Pingel et al., 2013)</span></h3>
+  <p class="pt">Mesma ideia, com raio crescendo de uma em uma célula e limiar s·r·c entre aberturas consecutivas. Diferença decisiva: depois de marcar os objetos, interpola um MDT provisório só com as células de solo e reclassifica cada ponto original pela distância a ele, com tolerância que cresce com a declividade local: |z − MDT| ≤ limiar + escalar·declividade.</p>
+  <p class="en">Same idea, with the radius growing one cell at a time and a threshold s·r·c between consecutive openings. The key difference: after flagging the objects, it interpolates a provisional DTM from the ground cells only and reclassifies each original point by its distance to it, with a tolerance that grows with the local slope: |z − DTM| ≤ threshold + scalar·slope.</p>
+
+  <h3 id="f-ptd"><span class="pt">TIN progressivo (Axelsson, 2000)</span><span class="en">Progressive TIN densification (Axelsson, 2000)</span></h3>
+  <p class="pt">Sementes: o ponto mais baixo de células do tamanho do maior edifício. Elas formam o TIN inicial. Para cada candidato, mede-se a distância d à faceta e os ângulos α aos três vértices; se ambos estão abaixo dos limiares, o ponto entra no TIN. Repete até ninguém entrar. Trabalha sobre os pontos, sem rasterizar, e foi o melhor filtro no teste da ISPRS; um ponto espúrio baixo contamina a vizinhança.</p>
+  <p class="en">Seeds: the lowest point of cells as large as the largest building. They form the initial TIN. For each candidate, the distance d to the facet and the angles α to its three vertices are measured; if both are under the thresholds, the point joins the TIN. Repeat until none joins. It works on the points, without rasterising, and was the best filter in the ISPRS test; a spurious low point corrupts its neighbourhood.</p>
+
+  <h3 id="f-robust"><span class="pt">Interpolação robusta (Kraus &amp; Pfeifer, 1998)</span><span class="en">Robust interpolation (Kraus &amp; Pfeifer, 1998)</span></h3>
+  <p class="pt">Ajusta uma superfície a todos os pontos com pesos iguais, calcula os resíduos v e repete com pesos assimétricos:</p>
+  <p class="en">Fits a surface to all points with equal weights, computes the residuals v and repeats with asymmetric weights:</p>
+  <p class="pt"><span class="formula">p(v) = 1 se v ≤ g; 1 / (1 + (a·(v − g))<sup>b</sup>) se g &lt; v ≤ g + w; 0 acima</span></p>
+  <p class="en"><span class="formula">p(v) = 1 if v ≤ g; 1 / (1 + (a·(v − g))<sup>b</sup>) if g &lt; v ≤ g + w; 0 above</span></p>
+  <p class="pt">O deslocamento g (negativo) vem dos próprios resíduos. Concebido para floresta; em área urbana precisa da versão hierárquica, porque um edifício grande puxa a superfície para cima.</p>
+  <p class="en">The shift g (negative) comes from the residuals themselves. Designed for forests; urban areas need the hierarchical version, because a large building pulls the surface up.</p>
+
+  <h3 id="f-csf"><span class="pt">Simulação de tecido, CSF (Zhang et al., 2016)</span><span class="en">Cloth simulation, CSF (Zhang et al., 2016)</span></h3>
+  <p class="pt">A nuvem é invertida: edifícios e árvores viram cavidades e o terreno vira a parte mais alta. Um tecido de partículas ligadas por molas cai sob gravidade; a rigidez (1 íngreme, 2 ondulado, 3 plano) impede que ele afunde nas cavidades. Pontos a menos do limiar de classe do tecido são solo. Poucos parâmetros, todos intuitivos; suaviza relevo íngreme e microrrelevo.</p>
+  <p class="en">The cloud is turned upside down: buildings and trees become cavities and the terrain becomes the highest part. A cloth of particles linked by springs falls under gravity; rigidness (1 steep, 2 rolling, 3 flat) keeps it from sinking into the cavities. Points within the class threshold of the cloth are ground. Few parameters, all intuitive; it smooths steep relief and micro-relief.</p>
+
+  <h3 id="f-mcc"><span class="pt">MCC (Evans &amp; Hudak, 2007) e mínimo por blocos</span><span class="en">MCC (Evans &amp; Hudak, 2007) and block minimum</span></h3>
+  <p class="pt">O MCC interpola uma superfície dos pontos de solo atuais, suaviza-a e remove os que a superam além de uma tolerância, em três escalas (λ·0,5, λ e λ·1,5, tolerância +0,1 m por escala). Feito para floresta densa em relevo acidentado: falha em edifícios grandes, cujo telhado inteiro vira a superfície. O mínimo por blocos aceita uma faixa acima do ponto mais baixo de cada célula; grosseiro sozinho, sobrevive como etapa de sementes dos demais.</p>
+  <p class="en">MCC interpolates a surface from the current ground points, smooths it and removes the points above it beyond a tolerance, at three scales (λ·0.5, λ and λ·1.5, tolerance +0.1 m per scale). Built for dense forest on rugged terrain: it fails on large buildings, whose whole roof becomes the surface. Block minimum accepts a band above the lowest point of each cell; crude on its own, it survives as the seed step of the others.</p>
+
+  <h2 id="s3"><span class="pt">3. Interpolação</span><span class="en">3. Interpolation</span></h2>
+  <p class="pt">Todo interpolador aqui é uma média ponderada das cotas de solo; o que muda é como os pesos são calculados. As amostras de solo filtradas são rarefeitas para uma por célula (a média), o mesmo que se faz com a referência.</p>
+  <p class="en">Every interpolator here is a weighted mean of ground heights; what changes is how the weights are computed. Filtered ground samples are thinned to one per cell (their mean), the same as for the reference.</p>
+  <ul>
+    <li class="pt"><strong>TIN linear</strong>: plano sobre cada triângulo de Delaunay; só os três vértices pesam (coordenadas baricêntricas). Aceita linhas de quebra; facetas visíveis em dados esparsos.</li>
+    <li class="en"><strong>Linear TIN</strong>: a plane over each Delaunay triangle; only the three vertices weigh (barycentric coordinates). Accepts breaklines; facets show on sparse data.</li>
+    <li class="pt"><strong>IDW</strong>: pesos 1/d<sup>p</sup> dos k vizinhos; rápido, produz "olhos de boi" em torno de pontos isolados e nunca passa das cotas amostradas.</li>
+    <li class="en"><strong>IDW</strong>: weights 1/d<sup>p</sup> of the k nearest; fast, makes "bull's-eyes" around isolated points and never exceeds the sampled heights.</li>
+    <li class="pt"><strong>Vizinho natural (Sibson)</strong>: o peso de cada amostra é a área de Voronoi que ela cede a q. Sem parâmetros; bom padrão para dados irregulares.</li>
+    <li class="en"><strong>Natural neighbour (Sibson)</strong>: each sample's weight is the Voronoi area it cedes to q. No parameters; a good default for irregular data.</li>
+    <li class="pt"><strong>Krigagem ordinária</strong>: pesos de um sistema montado com o variograma (modelo esférico ajustado); dá também a variância da estimativa, zero sobre as amostras e maior nos vazios.</li>
+    <li class="en"><strong>Ordinary kriging</strong>: weights from a system built with the variogram (fitted spherical model); it also gives the estimation variance, zero on the samples and larger in the gaps.</li>
+    <li class="pt"><strong>Spline de placa fina</strong>: a superfície de menor curvatura total pelas amostras; global e suave, pode oscilar junto a quebras.</li>
+    <li class="en"><strong>Thin-plate spline</strong>: the surface of least total curvature through the samples; global and smooth, it can overshoot near breaks.</li>
+  </ul>
+  <p class="pt">Com nuvens densas, a escolha do interpolador pesa menos que a filtragem: os métodos convergem onde há muitos pontos e divergem nos vazios que o filtro abriu sob edifícios e copas. Regra prática para a célula: o espaçamento médio dos pontos de solo, √(área/N), medido depois da filtragem.</p>
+  <p class="en">With dense clouds, the interpolator matters less than the filtering: the methods converge where there are many points and diverge in the gaps the filter opened under buildings and canopy. Rule of thumb for the cell size: the mean spacing of the ground points, √(area/N), measured after filtering.</p>
+
+  <h2 id="s4"><span class="pt">4. Qualidade</span><span class="en">4. Quality</span></h2>
+  <p class="pt">Classificação (Sithole &amp; Vosselman, 2004): a = solo mantido, b = solo rejeitado, c = objeto aceito, d = objeto rejeitado.</p>
+  <p class="en">Classification (Sithole &amp; Vosselman, 2004): a = ground kept, b = ground rejected, c = object accepted, d = object rejected.</p>
+  <p class="pt"><span class="formula">Tipo I = b/(a+b) · Tipo II = c/(c+d) · Total = (b+c)/(a+b+c+d)</span></p>
+  <p class="en"><span class="formula">Type I = b/(a+b) · Type II = c/(c+d) · Total = (b+c)/(a+b+c+d)</span></p>
+  <p class="pt">O tipo I tira pontos do MDT (vazios, cristas cortadas); o tipo II deixa calombos (restos de vegetação e edifícios). Apertar os limiares troca um pelo outro: o ajuste é escolher qual erro custa menos na aplicação. O kappa (κ) resume a concordância descontando o acaso.</p>
+  <p class="en">Type I removes points from the DTM (holes, cut ridges); Type II leaves bumps (remnants of vegetation and buildings). Tightening thresholds trades one for the other: tuning means choosing which error costs less in the application. Kappa (κ) summarises the agreement net of chance.</p>
+  <p class="pt">Altitudes: RMSE<sub>z</sub> = √(Σ Δz² / n), com Δz = MDT − referência medida (média dos pontos da classe 2 em cada célula). Relate também a média (revela viés) e o LE90. Nos <em>vazios</em> (sem solo medido) a comparação é com o TIN de referência: é ali que aparecem os restos de telhados.</p>
+  <p class="en">Heights: RMSE<sub>z</sub> = √(Σ Δz² / n), with Δz = DTM − measured reference (mean of the class-2 points per cell). Also report the mean (it reveals bias) and LE90. In the <em>voids</em> (no measured ground) the comparison is against the reference TIN: that is where roof remnants show.</p>
+  <p class="pt">PEC-PCD altimétrico (Decreto 89.817/1984, ET-CQDG), em frações da equidistância: classe A, PEC 0,27 e EP 1/6; B, 1/2 e 1/3; C, 3/5 e 2/5; D, 3/4 e 1/2. O produto atende à classe se 90% dos erros forem menores que o PEC e o RMSE não superar o EP.</p>
+  <p class="en">Altimetric PEC-PCD (Decree 89,817/1984, ET-CQDG), as fractions of the contour interval: class A, PEC 0.27 and EP 1/6; B, 1/2 and 1/3; C, 3/5 and 2/5; D, 3/4 and 1/2. A product meets a class if 90% of the errors are below the PEC and the RMSE does not exceed the EP.</p>
+
+  <h2 id="s5"><span class="pt">5. O que o simulador simplifica</span><span class="en">5. What the simulator simplifies</span></h2>
+  <p class="pt">Os filtros rodam no navegador, sobre um recorte, em menos de um segundo. Para isso, algumas implementações diferem das originais; as diferenças estão documentadas no código (core/filters) e foram medidas contra a PDAL no mesmo recorte: SMRF concorda em 99,1% dos pontos, PMF em 94,5% e CSF em 91,1%.</p>
+  <p class="en">Filters run in the browser, on a tile, in under a second. To get there, some implementations differ from the originals; the differences are documented in the code (core/filters) and were measured against PDAL on the same tile: SMRF agrees on 99.1% of the points, PMF on 94.5% and CSF on 91.1%.</p>
+  <ul>
+    <li class="pt">Declividade: vizinhos tomados da grade de mínimos (erosão com cone), não ponto a ponto.</li>
+    <li class="en">Slope-based: neighbours taken from the lowest-point grid (cone erosion), not point by point.</li>
+    <li class="pt">PMF: formulação em grade de Zhang; a da PDAL (vinda da PCL) abre em torno de cada ponto, por isso rejeita menos solo.</li>
+    <li class="en">PMF: Zhang's raster formulation; PDAL's (from PCL) opens around each point, so it rejects less ground.</li>
+    <li class="pt">TIN progressivo: candidatos rarefeitos ao mais baixo por célula de 1 m; rotulagem final por tolerância vertical ao TIN.</li>
+    <li class="en">Progressive TIN: candidates thinned to the lowest per 1 m cell; final labelling by vertical tolerance to the TIN.</li>
+    <li class="pt">Interpolação robusta: predição linear substituída por regressão local linear com núcleo gaussiano; hierarquia de dois níveis.</li>
+    <li class="en">Robust interpolation: linear prediction replaced by local-linear Gaussian kernel regression; two-level hierarchy.</li>
+    <li class="pt">CSF: molas simplificadas (meio deslocamento por rodada, rigidez = rodadas por passo); sem pós-processamento de encostas.</li>
+    <li class="en">CSF: simplified springs (half displacement per round, rigidness = rounds per step); no slope post-processing.</li>
+    <li class="pt">MCC: superfície média por célula, preenchida e suavizada, em vez da spline com tensão.</li>
+    <li class="en">MCC: per-cell mean surface, gap-filled and smoothed, instead of the tension spline.</li>
+    <li class="pt">Vizinho natural pelo método discreto de Park et al. (2006); spline de placa fina com amostras rarefeitas (máx. 900 por padrão); krigagem com os k vizinhos mais próximos.</li>
+    <li class="en">Natural neighbour by the discrete method of Park et al. (2006); thin-plate spline on thinned samples (max. 900 by default); kriging with the k nearest neighbours.</li>
+    <li class="pt">Não modelados: filtros por segmentos e aprendizado de máquina (exigem dados de treino), linhas de quebra.</li>
+    <li class="en">Not modelled: segment-based and machine-learning filters (they need training data), breaklines.</li>
+  </ul>
+
+  <h2 id="s6"><span class="pt">6. Referências</span><span class="en">6. References</span></h2>
+  <ul>
+    <li class="pt">Axelsson, P. (2000). DEM generation from laser scanner data using adaptive TIN models. IAPRS 33(B4).</li>
+    <li class="en">Axelsson, P. (2000). DEM generation from laser scanner data using adaptive TIN models. IAPRS 33(B4).</li>
+    <li class="pt">Evans, J. S.; Hudak, A. T. (2007). A multiscale curvature algorithm for classifying discrete return LiDAR in forested environments. IEEE TGRS 45(4).</li>
+    <li class="en">Evans, J. S.; Hudak, A. T. (2007). A multiscale curvature algorithm for classifying discrete return LiDAR in forested environments. IEEE TGRS 45(4).</li>
+    <li class="pt">Kraus, K.; Pfeifer, N. (1998). Determination of terrain models in wooded areas with airborne laser scanner data. ISPRS JPRS 53(4).</li>
+    <li class="en">Kraus, K.; Pfeifer, N. (1998). Determination of terrain models in wooded areas with airborne laser scanner data. ISPRS JPRS 53(4).</li>
+    <li class="pt">Park, S. W. et al. (2006). Discrete Sibson interpolation. IEEE TVCG 12(2).</li>
+    <li class="en">Park, S. W. et al. (2006). Discrete Sibson interpolation. IEEE TVCG 12(2).</li>
+    <li class="pt">Pingel, T. J.; Clarke, K. C.; McBride, W. A. (2013). An improved simple morphological filter for the terrain classification of airborne LIDAR data. ISPRS JPRS 77.</li>
+    <li class="en">Pingel, T. J.; Clarke, K. C.; McBride, W. A. (2013). An improved simple morphological filter for the terrain classification of airborne LIDAR data. ISPRS JPRS 77.</li>
+    <li class="pt">Sithole, G.; Vosselman, G. (2004). Experimental comparison of filter algorithms for bare-Earth extraction from airborne laser scanning point clouds. ISPRS JPRS 59.</li>
+    <li class="en">Sithole, G.; Vosselman, G. (2004). Experimental comparison of filter algorithms for bare-Earth extraction from airborne laser scanning point clouds. ISPRS JPRS 59.</li>
+    <li class="pt">Vosselman, G. (2000). Slope based filtering of laser altimetry data. IAPRS 33(B3).</li>
+    <li class="en">Vosselman, G. (2000). Slope based filtering of laser altimetry data. IAPRS 33(B3).</li>
+    <li class="pt">Zhang, K. et al. (2003). A progressive morphological filter for removing nonground measurements from airborne LIDAR data. IEEE TGRS 41(4).</li>
+    <li class="en">Zhang, K. et al. (2003). A progressive morphological filter for removing nonground measurements from airborne LIDAR data. IEEE TGRS 41(4).</li>
+    <li class="pt">Zhang, W. et al. (2016). An easy-to-use airborne LiDAR data filtering method based on cloth simulation. Remote Sensing 8(6).</li>
+    <li class="en">Zhang, W. et al. (2016). An easy-to-use airborne LiDAR data filtering method based on cloth simulation. Remote Sensing 8(6).</li>
+    <li class="pt">Brasil (1984). Decreto nº 89.817 (PEC); DSG, ET-CQDG.</li>
+    <li class="en">Brazil (1984). Decree 89,817 (PEC); DSG, ET-CQDG.</li>
+  </ul>
+</article>
+</div>
+<script type="module">
+import { bootLanguage } from './i18n.mjs';
+bootLanguage();
+</script>
+</body>
+</html>
